@@ -1,0 +1,13 @@
+.include "m8def.inc"
+ 
+         ldi r16, 0xFF
+         out DDRD, r16       ; Port B ist Ausgang
+                             
+         ldi r16, 0x00
+         out DDRB, r16       ; Port D ist Eingang
+                             
+ 
+         ldi r16, 0xFF
+         out PORTD, r16      ; PORTB auf 0xFF setzen -> alle LEDs aus
+loop:
+rjmp loop

@@ -1,0 +1,147 @@
+;************************************************************************
+;*	    Einfacher vollgrafischer VGA-Testbildgenerator		*
+;************************************************************************
+.nolist
+;* VGA-Testbildgenerator, 4 bit pro "Pixel", mit einem ATmega88.	*
+;* Mit der Taktfrequenz von 20 MHz und den 8kB Flash ist eine Auflösung	*
+;* von 128 x 120 Pixel bei 16 Farben möglich. Dabei wird der mega88 ge-	*
+;* schwindigkeitsmäßig und vom Flash-Speicherplatz her gut ausgenutzt.	*
+;* Der einfache D/A-Wandler aus 2x3 Widerständen bildet zusammen mit dem*
+;* 75-Ohm-Eingangswiderstand einen Spannungsteiler, der ein Signal von	*
+;* etwa 1 Vss liefert. Dies ergibt ein absolut scharfes Bild.		*
+;* Über Timer1 wird die Horizontalfrequenz von 31,5 kHz erzeugt.	*
+;* Zeiten siehe Timing.txt.						*
+;* Die Bilddaten kann man mit Hilfsprogram MakeBild.exe aus einem	*
+;* 128 x 120 x 4-bit-BMP (also 16 Farben) importieren.			*
+;* Das ergibt 7680 Byte Bilddaten.					*
+;* Damit die Farben etwa passen, muss es mit der			*
+;* Standard-Farbpalette gespeichert werden, also			*
+;* schwarz, blau, grün, türkis, rot, lila, gelb, grau, dunkelgrau usw.	*
+;* Gemessene Stromaufnahme: ATmega88: 45 mA @ 5 V (aus USB)		*
+;* Hauptstromverbraucher sind die ständig HIGH-gezogenen SYNC-Leitungen.*
+;* haftmann#software, Henrik Haftmann, heha@hrz.tu-chemnitz.de		*
+;************************************************************************
+
+.include "m88def.inc"
+.list
+
+;Port C (festgelegt durch CGA-Palette, RGBI)
+.equ R = 0		;R (1)	  über 680 Ohm
+.equ G = 1		;G (2)	  über 680 Ohm
+.equ B = 2		;B (3)	  über 680 Ohm
+.equ C = 3		;R,G,B je über 1k Ohm
+			;GND an (5),(6),(7),(8) und (10)
+;Port D
+.equ VSync = 0		;VSync direkt an Monitor (14)
+.equ HSync = 1		;HSync direkt an Monitor (13)
+
+.def SubLine=r18	;Initialisierungen überflüssig!
+.def Zeile=r17
+
+.org 0
+	rjmp	Initialisierung
+.org ICP1addr
+	rjmp	T1CapIsr	;Start Zeilenimpuls; nächste Zeile
+.org OC1Aaddr
+	rjmp	T1CompAIsr	;Ende Zeilenimpuls
+.org OC1Baddr
+;T1CompBIsr: Bilddaten starten (Latenz bis zu den Bilddaten: 4+7 Takte)
+	cpi	Zeile,120	;1
+	brcc	t1e		;1 Nichts tun innerhalb VBL
+PixelLoop:	;Ausgabe Pixelzeile (8 x 64 Takte, 25,6 µs)
+	out	PORTC,r0	;1
+	lpm	r0,Z+		;3
+	out	PORTC,r0	;1 4 Takte pro „Pixel“ -> 5 MHz Pixeltakt
+	swap	r0		;)
+	dec	r16		;)
+	nop			;)4
+	out	PORTC,r0	;)
+	lpm	r0,Z+
+	out	PORTC,r0
+	swap	r0
+	brne	PixelLoop	;2(1)
+	nop			;1
+	out	PORTC,r0	;1 letztes Nibble
+	ldi	r16,32		;1
+	nop			;1
+	clr	r0		;1
+	out	PORTC,r0	;1 schwarz
+t1e:	reti
+
+T1CompAIsr:	;Horizontalimpuls wegnehmen (Latenz: 4+4 Takte)
+	sbi	PortD,HSync	;2
+	reti
+
+T1CapIsr:	;hier Timer1-CTC-Überlauf
+	cbi	PortD,HSync	;2 HSync: aktiv (Latenz: 4+4 Takte)
+	cpi	Zeile,120
+	brcc	VBL
+	subi	SubLine,-64	;4 Zeilen lang dasselbe anzeigen
+	brcc	nextH		;Gruppe aus 4 Zeilen vorüber ?
+	subi	ZL,64		;Bytezeiger zurückspulen
+	sbci	ZH,0
+	reti
+nextH:
+	inc	Zeile		;nächste Vierergruppe, 0..119 = Bild, sonst vertikale Austastlücke
+	reti
+
+VBL:	inc	Zeile		;VBL-Zeilen werden ohne SubLine gezählt (insgesamt 525-480=45)
+	cpi	Zeile,120+45	;Bildrate: 31,5kHz / 525 Zeilen = 60Hz
+	breq	newFrame
+	cpi	Zeile,120+10
+	breq	setv
+	cpi	Zeile,120+12
+	brne	resv
+	reti
+setv:
+	cbi	PortD,VSync	;VSync: aktiv
+	reti
+resv:
+	sbi	PortD, VSync	;VSync: inaktiv
+	reti
+newFrame:
+	clr	Zeile
+	ldi	ZL,LOW(PicData*2)
+	ldi	ZH,HIGH(PicData*2)
+	reti			;bleibt in BlackLoop (Sleep)
+
+Initialisierung:
+	ldi	r16,HIGH(RAMEND)
+	out	SPH,r16
+	ldi	r16,LOW(RAMEND)	;Stackpointer initialisieren
+	out	SPL,r16
+	ldi	r16,0x26	;Timer1: 3 Interrupts aktivieren
+	sts	TIMSK1,r16
+	ldi	r16,0x19	;Vorteiler 1, CTC via ICR
+	sts	TCCR1B,r16
+	ldi	r16,HIGH(640)	;31,25 kHz Horizontalfrequenz (32 µs)
+	sts	ICR1H,r16
+	ldi	r16,LOW(640)
+	sts	ICR1L,r16
+	ldi	r16,HIGH(77)	;3,85 µs Horizontalimpulslänge
+	sts	OCR1AH,r16
+	ldi	r16,LOW(77)
+	sts	OCR1AL,r16
+	ldi	r16,HIGH(77+38-3);5,75 µs Bilddatenstart (mit Latenz-Kompensation)
+	sts	OCR1BH,r16
+	ldi	r16,LOW(77+38-3)
+	sts	OCR1BL,r16
+	ldi	r16,0xE7
+	sts	PRR,r16
+	ldi	r16,0x80
+	out	ACSR,r16
+	ldi	r16,0x01	;Sleep aktivieren (nur Idle, Timer1 muss laufen)
+	out	SMCR,r16
+	ser	r16
+	out	ddrc,r16	;RGB-Port (Nibble)
+	out	ddrd,r16	;Sync-Port (2 Bit)
+	ldi	r16,32
+	sei
+MainLoop:
+	sleep			;Interrupts machen den Rest …
+	rjmp	MainLoop	;…und versauen (nur) R0, R16-R18, SREG
+
+.nolist
+PicData:	;7680 (0x1E00) Byte Grafikdaten: 128 x 120 x 16 Farben
+		;(jedes „Pixel“ ist 5x4 VGA-Pixel von 640x480 groß)
+.include "Bild.i90"

@@ -1,0 +1,37 @@
+<ASSEMBLER_INFO>
+ <VERSION>2.1.30</VERSION>
+ <DEVICE>ATmega8</DEVICE>
+ <WORKING_DIR>F:\assemble</WORKING_DIR>
+ <INCLUDE_PATH>
+  <DIR>D:\Programme\Atmel\AVR Tools\AvrAssembler2\Appnotes</DIR>
+ </INCLUDE_PATH>
+ <SOURCE_FILE>F:\assemble\turtle1.asm</SOURCE_FILE>
+ <INCLUDED_FILES>
+  <FILE>F:\assemble\m8def.inc</FILE>
+ </INCLUDED_FILES>
+ <OBJECT_FILES>
+  <FILE>F:\assemble\turtle1.obj</FILE>
+ </OBJECT_FILES>
+ <HEX_FILES>
+  <FILE>F:\assemble\turtle1.hex</FILE>
+ </HEX_FILES>
+ <OUTPUT_FILES>
+  <FILE>F:\assemble\turtle1.map</FILE>
+ </OUTPUT_FILES>
+ <LABELS>
+  <main><FILE>F:\assemble\turtle1.asm</FILE><LINE>23</LINE></main>
+  <steuerung><FILE>F:\assemble\turtle1.asm</FILE><LINE>27</LINE></steuerung>
+  <aus><FILE>F:\assemble\turtle1.asm</FILE><LINE>80</LINE></aus>
+  <lenkrad><FILE>F:\assemble\turtle1.asm</FILE><LINE>57</LINE></lenkrad>
+  <rechts><FILE>F:\assemble\turtle1.asm</FILE><LINE>59</LINE></rechts>
+  <rechts2><FILE>F:\assemble\turtle1.asm</FILE><LINE>64</LINE></rechts2>
+  <links><FILE>F:\assemble\turtle1.asm</FILE><LINE>69</LINE></links>
+  <links2><FILE>F:\assemble\turtle1.asm</FILE><LINE>74</LINE></links2>
+  <pedal><FILE>F:\assemble\turtle1.asm</FILE><LINE>38</LINE></pedal>
+  <pedal1><FILE>F:\assemble\turtle1.asm</FILE><LINE>39</LINE></pedal1>
+  <pedal2><FILE>F:\assemble\turtle1.asm</FILE><LINE>50</LINE></pedal2>
+  <vr><FILE>F:\assemble\turtle1.asm</FILE><LINE>45</LINE></vr>
+  <tasten><FILE>F:\assemble\turtle1.asm</FILE><LINE>58</LINE></tasten>
+  <ende><FILE>F:\assemble\turtle1.asm</FILE><LINE>83</LINE></ende>
+ </LABELS>
+</ASSEMBLER_INFO>
